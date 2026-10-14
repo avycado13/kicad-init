@@ -1,8 +1,6 @@
 package files
 
-import "fmt"
-
-func CreateKicadGitignore(mgr *Manager, extraPaths []string) {
+func CreateKicadGitignore(mgr *Manager, extraPaths []string) (err error) {
 	paths := []string{
 		"*.000",
 		"*.bak",
@@ -31,18 +29,19 @@ func CreateKicadGitignore(mgr *Manager, extraPaths []string) {
 		".DS_Store",
 		"Thumbs.db",
 	}
-	combined := append(paths, extraPaths...)
 	file, err := mgr.CreateFile(".gitignore")
 	if err != nil {
-		fmt.Println("Error Creating Gitignore:", err)
+		return err
 	}
-
-	defer file.Close()
-	for _, value := range combined {
-		_, err = file.WriteString(value + "\n")
-		if err != nil {
-			fmt.Println("Error writing path to gitignore:", err)
+	defer func() {
+		if closeErr := file.Close(); err == nil {
+			err = closeErr
+		}
+	}()
+	for _, value := range append(paths, extraPaths...) {
+		if _, err = file.WriteString(value + "\n"); err != nil {
+			return err
 		}
 	}
-	fmt.Printf("Gitignore created: \n")
+	return nil
 }

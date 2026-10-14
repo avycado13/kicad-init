@@ -1,17 +1,20 @@
 package files
 
-import "fmt"
+import (
+	"fmt"
+	"path/filepath"
+)
 
-func CreateREADME(mgr *Manager) {
-	// Create README File
+func CreateREADME(mgr *Manager) (err error) {
 	file, err := mgr.CreateFile("README.md")
 	if err != nil {
-		fmt.Println("Error Creating README:", err)
+		return err
 	}
-	defer file.Close()
-	_, err = file.WriteString("# " + mgr.RootDir + "\n") // Heading with Project name inferred from name/root directory argument
-	if err != nil {
-		fmt.Println("Error writing to README:", err)
-	}
-	fmt.Printf("README created: \n")
+	defer func() {
+		if closeErr := file.Close(); err == nil {
+			err = closeErr
+		}
+	}()
+	_, err = fmt.Fprintf(file, "# %s\n", filepath.Base(filepath.Clean(mgr.RootDir)))
+	return err
 }

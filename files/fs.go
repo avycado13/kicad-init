@@ -1,9 +1,8 @@
-// Package files supplies and manages all Operations regarding Files and touching the filesystem
+// Package files supplies operations for creating project files.
 package files
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 )
@@ -12,31 +11,18 @@ type Manager struct {
 	RootDir string
 }
 
-func NewManager(dirname string) *Manager {
-	err := os.MkdirAll(dirname, 0o755)
-	if err != nil {
-		log.Fatal(err)
+func NewManager(dirname string) (*Manager, error) {
+	if err := os.MkdirAll(dirname, 0o755); err != nil {
+		return nil, fmt.Errorf("create project directory %q: %w", dirname, err)
 	}
-	fmt.Printf("Directory %s created\n", dirname)
-
-	return &Manager{RootDir: dirname}
-}
-
-func (m *Manager) mkDir(dirname string) {
-	fullPath := filepath.Join(m.RootDir, dirname)
-	err := os.MkdirAll(fullPath, 0o755)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("Directory %s created\n", dirname)
+	return &Manager{RootDir: dirname}, nil
 }
 
 func (m *Manager) CreateFile(path string) (*os.File, error) {
 	fullPath := filepath.Join(m.RootDir, path)
 	file, err := os.Create(fullPath)
 	if err != nil {
-		fmt.Println("Error creating file:", err)
-		return file, err
+		return nil, fmt.Errorf("create %q: %w", fullPath, err)
 	}
-	return file, err
+	return file, nil
 }
