@@ -29,9 +29,13 @@ func CreateKicadGitignore(mgr *Manager, extraPaths []string) {
 		"**/*-backups/*.zip",
 		"*.kicad_prl",
 		".DS_Store",
-		"Thumbs.db"}
+		"Thumbs.db",
+	}
 	combined := append(paths, extraPaths...)
 	file, err := mgr.CreateFile(".gitignore")
+	if err != nil {
+		fmt.Println("Error Creating Gitignore:", err)
+	}
 
 	defer file.Close()
 	for _, value := range combined {

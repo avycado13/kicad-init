@@ -1,3 +1,4 @@
+// Package files supplies and manages all Operations regarding Files and touching the filesystem
 package files
 
 import (
@@ -12,7 +13,7 @@ type Manager struct {
 }
 
 func NewManager(dirname string) *Manager {
-	err := os.MkdirAll(dirname, 0755)
+	err := os.MkdirAll(dirname, 0o755)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -23,7 +24,7 @@ func NewManager(dirname string) *Manager {
 
 func (m *Manager) mkDir(dirname string) {
 	fullPath := filepath.Join(m.RootDir, dirname)
-	err := os.MkdirAll(fullPath, 0755)
+	err := os.MkdirAll(fullPath, 0o755)
 	if err != nil {
 		log.Fatal(err)
 	}
