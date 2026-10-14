@@ -44,6 +44,7 @@ func initialModel(name string) model {
 		".gitignore",
 		"README.md",
 		"Git repository",
+		"JOURNAL.md",
 	}
 
 	return model{
@@ -81,6 +82,8 @@ func (m model) runAction(index int) error {
 			return fmt.Errorf("git init: %w: %s", err, strings.TrimSpace(string(output)))
 		}
 		return nil
+	case 3:
+		return files.CreateJournal(mgr)
 	default:
 		return fmt.Errorf("unknown action: %d", index)
 	}
