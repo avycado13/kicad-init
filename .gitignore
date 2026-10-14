@@ -35,3 +35,5 @@ go.work.sum
 
 # test directory
 test
+# Added by goreleaser init:
+dist/
