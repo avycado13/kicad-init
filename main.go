@@ -47,6 +47,12 @@ type model struct {
 	queue  []int
 }
 
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
 func initialModel(name string) model {
 	choices := []string{
 		".gitignore",
@@ -148,6 +154,7 @@ func main() {
 	namePtr := flag.String("name", "", "Project Name/Directory to Initialize")
 	help := flag.Bool("help", false, "Show the help message")
 	man := flag.Bool("man", false, "Show the man page")
+	versionFlag := flag.Bool("version", false, "Show the installed version of kicad-init")
 	flag.Parse()
 
 	manPage := mango.NewManPage(1, "kicad-init", "a KiCad project generator").
@@ -160,13 +167,17 @@ func main() {
 
 	flag.VisitAll(mflag.FlagVisitor(manPage))
 
-	if *help == true {
+	if *help {
 		// fmt.Println(manPage.Build(roff.NewDocument()))
 		flag.Usage()
 		os.Exit(0)
 	}
-	if *man == true {
+	if *man {
 		fmt.Println(manPage.Build(roff.NewDocument()))
+		os.Exit(0)
+	}
+	if *versionFlag {
+		fmt.Printf("my app %s, commit %s, built at %s", version, commit, date)
 		os.Exit(0)
 	}
 	if *namePtr == "" {
