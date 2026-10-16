@@ -8,6 +8,9 @@
 
 version: 2
 
+project_name: kicad-init
+
+  
 before:
   hooks:
     # You may remove this if you don't use go modules.
@@ -29,7 +32,7 @@ builds:
       - "386"
 
 archives:
-  - formats: [tar.gz]
+  - formats: [tar.gz, zip]
     # this name template makes the OS and Arch compatible with the results of `uname`.
     name_template: >-
       {{ .ProjectName }}_
@@ -42,6 +45,22 @@ archives:
     format_overrides:
       - goos: windows
         formats: [zip]
+nfpms:
+  - id: kicad-init
+    package_name: kicad-init
+    file_name_template: >-
+      {{ .ConventionalFileName }}
+    formats:
+      - deb
+      - rpm
+      - apk
+      - archlinux
+
+    vendor: avycado13
+    homepage: https://github.com/avycado13/kicad-init
+    maintainer: avycado13
+    description: A command-line tool to generate KiCad projects.
+    license: MIT
 
 changelog:
   sort: asc
