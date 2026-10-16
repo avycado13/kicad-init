@@ -21,7 +21,7 @@ func GenerateGithubRepoSettings() GithubRepoSettings {
 	}
 }
 
-func CreateGithubRepo() (err error) {
+func CreateGithubRepo(projectName string) (err error) {
 	settings := GenerateGithubRepoSettings()
 	publicString := "--public"
 	if !settings.Public {

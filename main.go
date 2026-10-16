@@ -9,6 +9,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/avycado13/kicad-init/actions"
 	"github.com/avycado13/kicad-init/files"
 	"github.com/avycado13/kicad-init/files/kicad"
 )
@@ -50,6 +51,7 @@ func initialModel(name string) model {
 		"Git repository",
 		"JOURNAL.md",
 		"KiCad Project",
+		"GitHub Repository",
 	}
 
 	return model{
@@ -62,6 +64,7 @@ func initialModel(name string) model {
 			2: {},
 			3: {},
 			4: {},
+			5: {},
 		},
 		status: make([]actionStatus, len(choices)),
 		errors: make(map[int]error),
@@ -88,6 +91,8 @@ func (m model) runAction(index int) error {
 		return files.CreateJournal(m.mgr)
 	case 4:
 		return kicad.CreateKiCadProject(m.mgr)
+	case 5:
+		return actions.CreateGithubRepo(m.projectName)
 	default:
 		return fmt.Errorf("unknown action: %d", index)
 	}
