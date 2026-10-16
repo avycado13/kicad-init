@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
+
 	"github.com/avycado13/kicad-init/files"
 	"github.com/avycado13/kicad-init/files/kicad"
 )
@@ -29,6 +30,8 @@ type actionFinishedMsg struct {
 type model struct {
 	projectName string
 	rootDir     string
+
+	mgr *files.Manager
 
 	choices  []string
 	cursor   int
@@ -70,26 +73,21 @@ func (m model) runAction(index int) error {
 		return fmt.Errorf("unknown action: %d", index)
 	}
 
-	mgr, err := files.NewManager(m.rootDir)
-	if err != nil {
-		return err
-	}
-
 	switch index {
 	case 0:
-		return files.CreateKicadGitignore(mgr, nil)
+		return files.CreateKicadGitignore(m.mgr, nil)
 	case 1:
-		return files.CreateREADME(mgr)
+		return files.CreateREADME(m.mgr)
 	case 2:
-		output, err := exec.Command("git", "-C", mgr.RootDir, "init").CombinedOutput()
+		output, err := exec.Command("git", "-C", m.mgr.RootDir, "init").CombinedOutput()
 		if err != nil {
 			return fmt.Errorf("git init: %w: %s", err, strings.TrimSpace(string(output)))
 		}
 		return nil
 	case 3:
-		return files.CreateJournal(mgr)
+		return files.CreateJournal(m.mgr)
 	case 4:
-		return kicad.CreateKiCadProject(mgr)
+		return kicad.CreateKiCadProject(m.mgr)
 	default:
 		return fmt.Errorf("unknown action: %d", index)
 	}
@@ -117,6 +115,17 @@ func (m *model) prepareActions() tea.Cmd {
 		m.step = 3
 		return nil
 	}
+
+	mgr, err := files.NewManager(m.rootDir)
+	if err != nil {
+		for _, index := range m.queue {
+			m.status[index] = statusFailed
+			m.errors[index] = err
+		}
+		m.step = 3
+		return nil
+	}
+	m.mgr = mgr
 
 	return m.startNextAction()
 }

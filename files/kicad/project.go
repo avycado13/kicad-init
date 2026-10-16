@@ -1,5 +1,4 @@
 // Package kicad handles all utilities related to creating and modifying KiCad files
-
 package kicad
 
 import (
