@@ -91,6 +91,9 @@ func (m model) runAction(index int) error {
 	case 1:
 		return files.CreateREADME(m.mgr)
 	case 2:
+		if _, err := exec.LookPath("git"); err != nil {
+			return fmt.Errorf("git is not installed")
+		}
 		output, err := exec.Command("git", "-C", m.mgr.RootDir, "init").CombinedOutput()
 		if err != nil {
 			return fmt.Errorf("git init: %w: %s", err, strings.TrimSpace(string(output)))
