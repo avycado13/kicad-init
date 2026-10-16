@@ -12,6 +12,9 @@ import (
 	"github.com/avycado13/kicad-init/actions"
 	"github.com/avycado13/kicad-init/files"
 	"github.com/avycado13/kicad-init/files/kicad"
+	"github.com/muesli/mango"
+	"github.com/muesli/mango/mflag"
+	"github.com/muesli/roff"
 )
 
 type actionStatus int
@@ -142,9 +145,30 @@ func (m *model) startNextAction() tea.Cmd {
 }
 
 func main() {
-	namePtr := flag.String("name", "", "Project Name to Initialize")
+	namePtr := flag.String("name", "", "Project Name/Directory to Initialize")
+	help := flag.Bool("help", false, "Show the help message")
+	man := flag.Bool("man", false, "Show the man page")
 	flag.Parse()
 
+	manPage := mango.NewManPage(1, "kicad-init", "a KiCad project generator").
+		WithLongDescription("kicad-init is a project generator and setter-upper for the KiCad EDA.\n"+
+			"Features:\n"+
+			"* User-friendly\n"+
+			"* Configurable").
+		WithSection("Copyright", "(C) 2026 avycado13.\n"+
+			"Released under MIT license.")
+
+	flag.VisitAll(mflag.FlagVisitor(manPage))
+
+	if *help == true {
+		// fmt.Println(manPage.Build(roff.NewDocument()))
+		flag.Usage()
+		os.Exit(0)
+	}
+	if *man == true {
+		fmt.Println(manPage.Build(roff.NewDocument()))
+		os.Exit(0)
+	}
 	if *namePtr == "" {
 		fmt.Fprintln(os.Stderr, "Error: the --name flag is required.")
 		flag.Usage()
