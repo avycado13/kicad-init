@@ -2,6 +2,7 @@
 package files
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -20,7 +21,10 @@ func NewManager(dirname string) (*Manager, error) {
 
 func (m *Manager) CreateFile(path string) (*os.File, error) {
 	fullPath := filepath.Join(m.RootDir, path)
-	file, err := os.Create(fullPath)
+	file, err := os.OpenFile(fullPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	if errors.Is(err, os.ErrExist) {
+		return nil, fmt.Errorf("%s already exists: %w", fullPath, os.ErrExist)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("create %q: %w", fullPath, err)
 	}
