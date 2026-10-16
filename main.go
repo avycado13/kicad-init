@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
@@ -26,6 +27,18 @@ const (
 	statusFailed
 )
 
+const (
+	stepSelect = iota
+	stepConfigure
+	stepReview
+	stepRun
+	stepDone
+)
+
+type projectConfig struct {
+	GitHub actions.GithubRepoSettings
+}
+
 type actionFinishedMsg struct {
 	index int
 	err   error
@@ -40,6 +53,10 @@ type model struct {
 	choices  []string
 	cursor   int
 	selected map[int]struct{}
+
+	config      projectConfig
+	configField int // 0: repository name, 1: visibility
+	configError string
 
 	step   int
 	status []actionStatus
@@ -66,7 +83,11 @@ func initialModel(name string) model {
 	return model{
 		projectName: name,
 		rootDir:     name,
-		choices:     choices,
+		config: projectConfig{GitHub: actions.GithubRepoSettings{
+			Name:   filepath.Base(filepath.Clean(name)),
+			Public: true,
+		}},
+		choices: choices,
 		selected: map[int]struct{}{
 			0: {},
 			1: {},
@@ -104,7 +125,7 @@ func (m model) runAction(index int) error {
 	case 4:
 		return kicad.CreateKiCadProject(m.mgr)
 	case 5:
-		return actions.CreateGithubRepo(m.projectName)
+		return actions.CreateGithubRepo(m.config.GitHub)
 	default:
 		return fmt.Errorf("unknown action: %d", index)
 	}
@@ -129,7 +150,7 @@ func (m *model) prepareActions() tea.Cmd {
 	}
 
 	if len(m.queue) == 0 {
-		m.step = 3
+		m.step = stepDone
 		return nil
 	}
 
@@ -139,7 +160,7 @@ func (m *model) prepareActions() tea.Cmd {
 			m.status[index] = statusFailed
 			m.errors[index] = err
 		}
-		m.step = 3
+		m.step = stepDone
 		return nil
 	}
 	m.mgr = mgr
@@ -208,7 +229,7 @@ func (m model) Init() tea.Cmd {
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case actionFinishedMsg:
-		if m.step != 2 || len(m.queue) == 0 || m.queue[0] != msg.index {
+		if m.step != stepRun || len(m.queue) == 0 || m.queue[0] != msg.index {
 			return m, nil
 		}
 		if msg.err != nil {
@@ -221,29 +242,35 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.queue = m.queue[1:]
 
 		if len(m.queue) == 0 {
-			m.step = 3
+			m.step = stepDone
 			return m, nil
 		}
 
 		return m, m.startNextAction()
 
 	case tea.KeyPressMsg:
+		if msg.String() == "ctrl+c" {
+			return m, tea.Quit
+		}
+		if m.step == stepConfigure {
+			return m.updateConfig(msg), nil
+		}
 		switch msg.String() {
-		case "ctrl+c", "q":
+		case "q":
 			return m, tea.Quit
 
 		case "up", "k":
-			if m.step == 0 && m.cursor > 0 {
+			if m.step == stepSelect && m.cursor > 0 {
 				m.cursor--
 			}
 
 		case "down", "j":
-			if m.step == 0 && m.cursor < len(m.choices)-1 {
+			if m.step == stepSelect && m.cursor < len(m.choices)-1 {
 				m.cursor++
 			}
 
 		case "space":
-			if m.step == 0 {
+			if m.step == stepSelect {
 				if _, ok := m.selected[m.cursor]; ok {
 					delete(m.selected, m.cursor)
 				} else {
@@ -253,18 +280,59 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "enter":
 			switch m.step {
-			case 0:
-				m.step = 1
-			case 1:
-				m.step = 2
+			case stepSelect:
+				if _, ok := m.selected[5]; ok {
+					m.step = stepConfigure
+				} else {
+					m.step = stepReview
+				}
+			case stepReview:
+				m.step = stepRun
 				return m, m.prepareActions()
-			case 3:
+			case stepDone:
 				return m, tea.Quit
 			}
 		}
 	}
 
 	return m, nil
+}
+
+func (m model) updateConfig(msg tea.KeyPressMsg) model {
+	switch msg.String() {
+	case "esc":
+		m.step = stepSelect
+	case "up", "tab", "down", "shift+tab":
+		m.configField = 1 - m.configField
+	case "enter":
+		if m.config.GitHub.Name == "" {
+			m.configError = "Repository name cannot be empty"
+		} else {
+			m.configError = ""
+			m.step = stepReview
+		}
+	case "space":
+		if m.configField == 1 {
+			m.config.GitHub.Public = !m.config.GitHub.Public
+		}
+	case "backspace":
+		if m.configField == 0 && len(m.config.GitHub.Name) > 0 {
+			name := []rune(m.config.GitHub.Name)
+			m.config.GitHub.Name = string(name[:len(name)-1])
+			m.configError = ""
+		}
+	default:
+		if m.configField == 0 && msg.Text != "" {
+			for _, r := range msg.Text {
+				if r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || r == '-' || r == '_' || r == '.' {
+					m.config.GitHub.Name += string(r)
+				} else {
+					m.configError = "Use letters, numbers, hyphens, underscores or dots"
+				}
+			}
+		}
+	}
+	return m
 }
 
 func statusLabel(s actionStatus) string {
@@ -290,7 +358,7 @@ func (m model) View() tea.View {
 	fmt.Fprintf(&s, "  Project: %s\n\n", m.projectName)
 
 	switch m.step {
-	case 0:
+	case stepSelect:
 		s.WriteString("  Select what to include:\n\n")
 
 		for i, choice := range m.choices {
@@ -308,9 +376,28 @@ func (m model) View() tea.View {
 		}
 
 		s.WriteString("\n  ↑/↓ Navigate • Space Toggle\n")
-		s.WriteString("  Enter Review • q Quit\n")
+		s.WriteString("  Enter Continue • q Quit\n")
 
-	case 1:
+	case stepConfigure:
+		s.WriteString("  Configure GitHub repository:\n\n")
+		nameCursor, visibilityCursor := "  ", "  "
+		if m.configField == 0 {
+			nameCursor = "❯ "
+		} else {
+			visibilityCursor = "❯ "
+		}
+		visibility := "Private"
+		if m.config.GitHub.Public {
+			visibility = "Public"
+		}
+		fmt.Fprintf(&s, "%sName: %s\n%sVisibility: %s\n", nameCursor, m.config.GitHub.Name, visibilityCursor, visibility)
+		if m.configError != "" {
+			fmt.Fprintf(&s, "\n  %s\n", m.configError)
+		}
+		s.WriteString("\n  ↑/↓ Select • Type/Backspace Edit Name • Space Toggle Visibility\n")
+		s.WriteString("  Enter Review • Esc Back • Ctrl+C Quit\n")
+
+	case stepReview:
 		s.WriteString("  Review selected actions:\n\n")
 
 		if len(m.selected) == 0 {
@@ -320,12 +407,19 @@ func (m model) View() tea.View {
 		for i, choice := range m.choices {
 			if _, ok := m.selected[i]; ok {
 				fmt.Fprintf(&s, "  • %s\n", choice)
+				if i == 5 {
+					visibility := "private"
+					if m.config.GitHub.Public {
+						visibility = "public"
+					}
+					fmt.Fprintf(&s, "    Name: %s (%s)\n", m.config.GitHub.Name, visibility)
+				}
 			}
 		}
 
 		s.WriteString("\n  Enter Initialize • q Quit\n")
 
-	case 2, 3:
+	case stepRun, stepDone:
 		s.WriteString("  Initialization progress:\n\n")
 
 		for i, choice := range m.choices {
@@ -340,7 +434,7 @@ func (m model) View() tea.View {
 			}
 		}
 
-		if m.step == 2 {
+		if m.step == stepRun {
 			s.WriteString("\n  Working...\n")
 		} else {
 			s.WriteString("\n  Initialization finished.\n")

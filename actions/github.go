@@ -23,8 +23,10 @@ func GenerateGithubRepoSettings() GithubRepoSettings {
 	}
 }
 
-func CreateGithubRepo(projectName string) (err error) {
-	settings := GenerateGithubRepoSettings()
+func CreateGithubRepo(settings GithubRepoSettings) (err error) {
+	if settings.Name == "" {
+		return fmt.Errorf("GitHub repository name cannot be empty")
+	}
 	publicString := "--public"
 	if !settings.Public {
 		publicString = "--private"
@@ -39,7 +41,7 @@ func CreateGithubRepo(projectName string) (err error) {
 
 	_, _, err = gh.Exec("repo", "create", settings.Name, "--description", settings.Description, publicString)
 	if err != nil {
-		return fmt.Errorf(": %w", err)
+		return fmt.Errorf("create GitHub repository %q: %w", settings.Name, err)
 	}
 	return nil
 }
