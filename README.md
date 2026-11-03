@@ -3,7 +3,7 @@ A simple way to initialize KiCad EDA projects.
 
 
 ## Getting Started
-1. Install using directions [below](##Installation)
+1. Install using directions [below](#installation)
 2. Run and Provide new directory name
 3. Select which tasks you want
 4. let it do it's thing
@@ -17,4 +17,12 @@ A simple way to initialize KiCad EDA projects.
 - Adds .gitignore
 
 ## Installation
-Currently, `kicad-init` is distributed through a GitHub action that runs [goreleaser](https://goreleaser.com/) and pushes it to GitHub Releases. It currently builds for almost all modern platforms. I have only tested it on MacOS. Please make sure you have `git` and the `gh` CLI installed.
+On macOS or Linux, install the latest release (verified against the release checksum):
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/avycado13/kicad-init/main/install.sh | sh
+```
+
+This installs to `~/.local/bin`; add that directory to your `PATH` if needed. To choose another location, download the script and run `INSTALL_DIR=/your/bin sh install.sh`. Windows users can download the binary from [GitHub Releases](https://github.com/avycado13/kicad-init/releases).
+
+The tool also needs `git` and the `gh` CLI for the corresponding project setup tasks.
