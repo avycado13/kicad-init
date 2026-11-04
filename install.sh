@@ -2,7 +2,7 @@
 # Install the latest kicad-init release from GitHub.
 set -eu
 
-repo='https://github.com/avycado13/kicad-init/releases/latest/download'
+repo='https://github.com/avycado13/kicad-init'
 install_dir=${INSTALL_DIR:-"$HOME/.local/bin"}
 
 case "$(uname -s)" in
@@ -32,8 +32,15 @@ fetch() {
   fi
 }
 
-fetch "$repo/$archive" "$tmp/$archive"
-fetch "$repo/checksums.txt" "$tmp/checksums.txt"
+fetch "https://api.github.com/repos/avycado13/kicad-init/releases/latest" "$tmp/release.json"
+tag=$(sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$tmp/release.json" | head -n 1)
+case "$tag" in
+  ''|*[!a-zA-Z0-9._-]*) echo 'Could not determine the latest release tag.' >&2; exit 1 ;;
+esac
+version=${tag#v}
+release="$repo/releases/download/$tag"
+fetch "$release/$archive" "$tmp/$archive"
+fetch "$release/kicad-init_${version}_checksums.txt" "$tmp/checksums.txt"
 expected=$(awk -v name="$archive" '$2 == name { print $1 }' "$tmp/checksums.txt")
 if [ -z "$expected" ]; then
   echo "No checksum found for $archive" >&2
