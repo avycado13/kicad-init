@@ -40,6 +40,16 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
           # GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+      - name: Locate release checksums
+        id: checksums
+        shell: bash
+        run: |
+          files=(dist/kicad-init_*_checksums.txt)
+          if [[ ${#files[@]} -ne 1 || ! -f ${files[0]} ]]; then
+            echo 'Expected exactly one GoReleaser checksums file' >&2
+            exit 1
+          fi
+          echo "path=${files[0]}" >> "$GITHUB_OUTPUT"
       - uses: actions/attest@v4
         with:
-          subject-checksums: ./dist/checksums.txt
+          subject-checksums: ${{ steps.checksums.outputs.path }}
